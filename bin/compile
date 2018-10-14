@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+
+ENV_DIR=$3
+BUILD_DIR=$1
+
+GIT_SSH_DIR=~/.ssh
+GIT_SSH_IDENTITY_FILE=$GIT_SSH_DIR/gitkey
+GIT_SSH_CONFIG_FILE=$GIT_SSH_DIR/config
+
+if [ -f "$ENV_DIR/GIT_SSH_KEY" ] && [ -f "$ENV_DIR/GIT_SSH_HOST" ]; then
+  echo "Detected SSH key and host for git. Adding SSH config" >&1
+  echo "" >&1
+
+  # Ensure presence of the SSH directory
+  if [ ! -d $GIT_SSH_DIR ]; then
+    mkdir -p $GIT_SSH_DIR
+    chmod 700 $GIT_SSH_DIR
+  fi
+
+  # Load the git SSH key into a file
+  cp $ENV_DIR/GIT_SSH_KEY $GIT_SSH_IDENTITY_FILE
+
+  # Change the permissions on the file to be read-write for this user
+  chmod 600 $GIT_SSH_IDENTITY_FILE
+
+  # Set up the SSH config file
+  echo -e "Host $(cat $ENV_DIR/GIT_SSH_HOST)\n"\
+          " IdentityFile $GIT_SSH_IDENTITY_FILE\n"\
+          " IdentitiesOnly yes\n"\
+          " UserKnownHostsFile=/dev/null\n"\
+          " StrictHostKeyChecking no"\
+          > $GIT_SSH_CONFIG_FILE
+
+  chmod 600 $GIT_SSH_CONFIG_FILE
+
+  # cleanup
+  mkdir -p "$BUILD_DIR/.profile.d"
+  echo "unset -v GIT_SSH_KEY" > $BUILD_DIR/.profile.d/unset-ssh-key.sh
+  echo "unset -v GIT_SSH_HOST" > $BUILD_DIR/.profile.d/unset-ssh-host.sh
+fi
